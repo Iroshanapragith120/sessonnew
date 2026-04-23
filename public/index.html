@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PODDA-MD TERMINAL</title>
+    <style>
+        body { background: #000; color: #0f0; font-family: 'Courier New', monospace; text-align: center; margin: 0; overflow: hidden; }
+        canvas { position: fixed; top: 0; left: 0; z-index: -1; opacity: 0.6; }
+        .main-box { border: 2px solid #0f0; display: inline-block; padding: 50px; margin-top: 80px; background: rgba(0, 20, 0, 0.9); box-shadow: 0 0 40px #0f0; border-radius: 20px; }
+        h1 { font-size: 4em; letter-spacing: 15px; text-shadow: 0 0 20px #0f0; margin: 0; color: #0f0; }
+        .sub-text { color: #fff; letter-spacing: 2px; margin-bottom: 30px; }
+        #qr-container { margin-top: 20px; display: none; }
+        #qr-img { width: 250px; border: 5px solid #fff; box-shadow: 0 0 15px #fff; }
+        button { background: #0f0; color: #000; border: none; padding: 15px 40px; font-size: 1.3em; font-weight: bold; cursor: pointer; transition: 0.3s; font-family: 'Courier New'; }
+        button:hover { background: #fff; box-shadow: 0 0 25px #fff; }
+        #status-msg { margin-top: 25px; color: #0ff; font-weight: bold; font-size: 1.1em; }
+    </style>
+</head>
+<body>
+    <canvas id="matrix"></canvas>
+    <div class="main-box">
+        <h1>PODDA-MD</h1>
+        <div class="sub-text">SESSION GENERATOR SYSTEM</div>
+        <button id="get-btn" onclick="startGeneration()">INITIALIZE_QR</button>
+        <div id="qr-container">
+            <img id="qr-img" src="">
+        </div>
+        <div id="status-msg"></div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('matrix');
+        const ctx = canvas.getContext('2d');
+        canvas.height = window.innerHeight;
+        canvas.width = window.innerWidth;
+        const columns = Math.floor(canvas.width / 20);
+        const drops = Array(columns).fill(1);
+
+        function drawMatrix() {
+            ctx.fillStyle = "rgba(0, 0, 0, 0.05)";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = "#0f0";
+            ctx.font = "20px monospace";
+            drops.forEach((y, i) => {
+                const text = Math.floor(Math.random() * 10);
+                ctx.fillText(text, i * 20, y);
+                if (y > canvas.height && Math.random() > 0.975) drops[i] = 0;
+                drops[i] += 20;
+            });
+        }
+        setInterval(drawMatrix, 50);
+
+        async function startGeneration() {
+            document.getElementById('get-btn').style.display = 'none';
+            const status = document.getElementById('status-msg');
+            status.innerText = "REQUESTING_ENCRYPTED_QR...";
+
+            setInterval(async () => {
+                try {
+                    const res = await fetch('/qr');
+                    const data = await res.json();
+                    if (data.qr) {
+                        document.getElementById('qr-container').style.display = 'block';
+                        document.getElementById('qr-img').src = data.qr;
+                        status.innerText = "SCAN_QR_WITH_WHATSAPP";
+                    }
+
+                    const stRes = await fetch('/status');
+                    const stData = await stRes.json();
+                    if (stData.id) {
+                        document.getElementById('qr-container').style.display = 'none';
+                        status.style.color = "#fff";
+                        status.innerText = "SUCCESS! SESSION SENT TO YOUR WHATSAPP.";
+                    }
+                } catch (e) {}
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
