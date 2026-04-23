@@ -6,7 +6,9 @@ const fs = require("fs");
 const path = require("path");
 
 const app = express();
-const PORT = process.env.PORT || 7860;
+
+// වැදගත්ම දේ: ඕනෑම ප්ලැට්ෆෝම් එකක පෝර්ට් එක ඔටෝම අල්ලගන්නවා
+const PORT = process.env.PORT || 8000; 
 
 let qrCodeURL = null;
 let sessionID = null;
@@ -15,13 +17,17 @@ let sock = null;
 app.use(express.static('public'));
 
 async function startBot() {
+    // Session Folder එක නැත්නම් හදනවා
+    if (!fs.existsSync("./session_auth")) {
+        fs.mkdirSync("./session_auth");
+    }
+
     const { state, saveCreds } = await useMultiFileAuthState("./session_auth");
     const { version } = await fetchLatestBaileysVersion();
     
     sock = makeWASocket({
         version,
         auth: state,
-        printQRInTerminal: true,
         logger: pino({ level: "silent" }),
         browser: ["PODDA-MD", "Chrome", "1.1.0"]
     });
@@ -29,8 +35,9 @@ async function startBot() {
     sock.ev.on("connection.update", async (update) => {
         const { connection, lastDisconnect, qr } = update;
         
-        // QR එකක් ආවොත් ඒක URL එකකට හරවනවා
-        if (qr) qrCodeURL = await qrcode.toDataURL(qr);
+        if (qr) {
+            qrCodeURL = await qrcode.toDataURL(qr);
+        }
 
         if (connection === "open") {
             const authPath = path.join(__dirname, "session_auth", "creds.json");
@@ -38,36 +45,46 @@ async function startBot() {
             if (fs.existsSync(authPath)) {
                 const authData = fs.readFileSync(authPath);
                 sessionID = "PODDA-MD;;;" + Buffer.from(authData).toString("base64");
-                await sock.sendMessage(sock.user.id, { text: sessionID });
+                await sock.sendMessage(sock.user.id, { text: `🚀 *PODDA-MD SESSION SUCCESS*\n\n\`${sessionID}\`` });
+                console.log("✅ SESSION_ID_SENT");
             }
         }
 
         if (connection === "close") {
             const reason = lastDisconnect?.error?.output?.statusCode;
-            if (reason !== DisconnectReason.loggedOut) startBot();
+            // 401 (Logged Out) නෙමෙයි නම් විතරක් රීකනෙක්ට් වෙනවා
+            if (reason !== DisconnectReason.loggedOut) {
+                console.log("🔄 Reconnecting...");
+                startBot();
+            }
         }
     });
 
     sock.ev.on("creds.update", saveCreds);
 }
 
-// Pairing Route
+// Routes
 app.get("/pair", async (req, res) => {
-    let num = req.query.number.replace(/[^0-9]/g, '');
-    if (!num) return res.status(400).json({ error: "ENTER_NUMBER" });
+    let num = req.query.number?.replace(/[^0-9]/g, '');
+    if (!num) return res.status(400).json({ error: "INVALID_NUMBER" });
+
     try {
-        if (!sock) return res.status(503).json({ error: "STARTING_SYSTEM" });
+        if (!sock) return res.status(503).json({ error: "SYSTEM_STARTING" });
         const code = await sock.requestPairingCode(num);
         res.json({ code });
     } catch (err) {
-        res.status(500).json({ error: "WHATSAPP_BUSY: Try QR or wait." });
+        console.error(err);
+        res.status(500).json({ error: "CONNECTION_FAILED" });
     }
 });
 
 app.get("/qr", (req, res) => res.json({ qr: qrCodeURL }));
 app.get("/status", (req, res) => res.json({ id: sessionID }));
 
+// සර්වර් එක රන් කරනවා
 app.listen(PORT, () => {
-    console.log(`Server live on ${PORT}`);
+    console.log(`------------------------------------------`);
+    console.log(`🚀 PODDA-MD IS LIVE ON PORT: ${PORT}`);
+    console.log(`------------------------------------------`);
     startBot();
 });
