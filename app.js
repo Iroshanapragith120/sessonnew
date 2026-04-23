@@ -6,8 +6,7 @@ const fs = require("fs");
 const path = require("path");
 
 const app = express();
-// Hugging Face එකේ 503 error එක නැති වෙන්න පෝර්ට් එක 7860 ම වෙන්න ඕනේ
-const PORT = process.env.PORT || 7860; 
+const PORT = process.env.PORT || 7860; // Hugging Face එකට අනිවාර්යයි
 
 let qrCodeURL = null;
 let sessionID = null;
@@ -21,12 +20,10 @@ async function startBot() {
     const sock = makeWASocket({
         version,
         auth: state,
-        printQRInTerminal: true,
         logger: pino({ level: "silent" }),
-        browser: ["PODDA-MD PAIRING", "Chrome", "1.1.0"] // ඩොමේන් එකට පෙනෙන්න මෙතන නම දැම්මා
+        browser: ["PODDA-MD", "Chrome", "1.0.0"]
     });
 
-    // Pairing Code Request
     app.get("/pair", async (req, res) => {
         let num = req.query.number.replace(/[^0-9]/g, '');
         if (!sock.authState.creds.registered) {
@@ -39,26 +36,20 @@ async function startBot() {
     sock.ev.on("connection.update", async (update) => {
         const { connection, lastDisconnect, qr } = update;
         if (qr) qrCodeURL = await qrcode.toDataURL(qr);
-
         if (connection === "open") {
             const authPath = path.join(__dirname, "session_auth", "creds.json");
-            await delay(3000); 
+            await delay(5000);
             if (fs.existsSync(authPath)) {
                 const authData = fs.readFileSync(authPath);
                 sessionID = "PODDA-MD;;;" + Buffer.from(authData).toString("base64");
-                
-                await sock.sendMessage(sock.user.id, { 
-                    text: `🚀 *PODDA-MD SESSION SUCCESS*\n\n\`${sessionID}\` \n\n> *Keep this safe!*` 
-                });
+                await sock.sendMessage(sock.user.id, { text: sessionID });
             }
         }
-
         if (connection === "close") {
             const shouldReconnect = lastDisconnect.error?.output?.statusCode !== DisconnectReason.loggedOut;
             if (shouldReconnect) startBot();
         }
     });
-
     sock.ev.on("creds.update", saveCreds);
 }
 
@@ -66,10 +57,6 @@ app.get("/qr", (req, res) => res.json({ qr: qrCodeURL }));
 app.get("/status", (req, res) => res.json({ id: sessionID }));
 
 app.listen(PORT, () => {
-    // ටර්මිනල් එකේ ලින්ක් එක වැටෙන්න මෙතන හැදුවා
-    console.log("------------------------------------------");
-    console.log("🌐 PODDA-MD PAIRING SYSTEM IS LIVE!");
-    console.log(`🔗 YOUR SITE LINK: https://[YOUR-SPACE-NAME].hf.space`);
-    console.log("------------------------------------------");
+    console.log(`Server is running on port ${PORT}`);
     startBot();
 });
