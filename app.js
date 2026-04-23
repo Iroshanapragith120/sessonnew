@@ -6,9 +6,10 @@ const fs = require("fs");
 const path = require("path");
 
 const app = express();
-const PORT = process.env.PORT || 7860;
+// Hugging Face එකේ 503 error එක නැති වෙන්න පෝර්ට් එක 7860 ම වෙන්න ඕනේ
+const PORT = process.env.PORT || 7860; 
+
 let qrCodeURL = null;
-let pairCode = null;
 let sessionID = null;
 
 app.use(express.static('public'));
@@ -22,10 +23,10 @@ async function startBot() {
         auth: state,
         printQRInTerminal: true,
         logger: pino({ level: "silent" }),
-        browser: ["PODDA-MD", "Chrome", "1.1.0"]
+        browser: ["PODDA-MD PAIRING", "Chrome", "1.1.0"] // ඩොමේන් එකට පෙනෙන්න මෙතන නම දැම්මා
     });
 
-    // Pairing Code logic
+    // Pairing Code Request
     app.get("/pair", async (req, res) => {
         let num = req.query.number.replace(/[^0-9]/g, '');
         if (!sock.authState.creds.registered) {
@@ -41,7 +42,7 @@ async function startBot() {
 
         if (connection === "open") {
             const authPath = path.join(__dirname, "session_auth", "creds.json");
-            await delay(2000); // Wait for file write
+            await delay(3000); 
             if (fs.existsSync(authPath)) {
                 const authData = fs.readFileSync(authPath);
                 sessionID = "PODDA-MD;;;" + Buffer.from(authData).toString("base64");
@@ -49,7 +50,6 @@ async function startBot() {
                 await sock.sendMessage(sock.user.id, { 
                     text: `🚀 *PODDA-MD SESSION SUCCESS*\n\n\`${sessionID}\` \n\n> *Keep this safe!*` 
                 });
-                console.log("Session Generated!");
             }
         }
 
@@ -66,6 +66,10 @@ app.get("/qr", (req, res) => res.json({ qr: qrCodeURL }));
 app.get("/status", (req, res) => res.json({ id: sessionID }));
 
 app.listen(PORT, () => {
-    console.log(`Server started on ${PORT}`);
+    // ටර්මිනල් එකේ ලින්ක් එක වැටෙන්න මෙතන හැදුවා
+    console.log("------------------------------------------");
+    console.log("🌐 PODDA-MD PAIRING SYSTEM IS LIVE!");
+    console.log(`🔗 YOUR SITE LINK: https://[YOUR-SPACE-NAME].hf.space`);
+    console.log("------------------------------------------");
     startBot();
 });
