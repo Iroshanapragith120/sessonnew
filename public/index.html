@@ -1,149 +1,3 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PODDA-MD | TERMINAL</title>
-    <style>
-        :root {
-            --glow-green: #0f0;
-            --error-red: #ff0000;
-        }
-
-        body {
-            margin: 0;
-            padding: 0;
-            background: #000;
-            background-image: linear-gradient(rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.8)), url('bg.jpg');
-            background-size: cover;
-            background-position: center;
-            background-attachment: fixed;
-            color: var(--glow-green);
-            font-family: 'Courier New', monospace;
-            overflow: hidden;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-        }
-
-        canvas {
-            position: fixed;
-            top: 0;
-            left: 0;
-            z-index: -1;
-            opacity: 0.3;
-        }
-
-        .terminal-box {
-            background: rgba(0, 20, 0, 0.9);
-            border: 2px solid var(--glow-green);
-            padding: 40px;
-            border-radius: 15px;
-            box-shadow: 0 0 20px rgba(0, 255, 0, 0.2);
-            text-align: center;
-            width: 90%;
-            max-width: 450px;
-            position: relative;
-            z-index: 10;
-        }
-
-        h1 {
-            font-size: 3em;
-            letter-spacing: 10px;
-            margin: 0;
-            text-shadow: 0 0 15px var(--glow-green);
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.6; }
-            100% { opacity: 1; }
-        }
-
-        .subtitle {
-            font-size: 0.8em;
-            letter-spacing: 4px;
-            margin-bottom: 30px;
-            color: #fff;
-            opacity: 0.7;
-        }
-
-        input {
-            background: transparent;
-            border: 1px solid var(--glow-green);
-            color: #fff;
-            padding: 12px;
-            width: 80%;
-            text-align: center;
-            font-size: 1.1em;
-            outline: none;
-            margin-bottom: 20px;
-            border-radius: 5px;
-        }
-
-        button {
-            background: var(--glow-green);
-            color: #000;
-            border: none;
-            padding: 12px 25px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: 0.3s;
-            margin: 5px;
-            border-radius: 5px;
-            font-family: 'Courier New', monospace;
-        }
-
-        button:hover {
-            box-shadow: 0 0 20px var(--glow-green);
-            transform: scale(1.05);
-        }
-
-        #status-msg {
-            margin-top: 20px;
-            font-weight: bold;
-            min-height: 20px;
-            transition: 0.3s;
-        }
-
-        /* Error Styles */
-        .error-state {
-            border-color: var(--error-red) !important;
-            color: var(--error-red) !important;
-            box-shadow: 0 0 30px rgba(255, 0, 0, 0.4) !important;
-            animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
-        }
-
-        @keyframes shake {
-            10%, 90% { transform: translate3d(-1px, 0, 0); }
-            20%, 80% { transform: translate3d(2px, 0, 0); }
-            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
-            40%, 60% { transform: translate3d(4px, 0, 0); }
-        }
-
-        #pair-code-display {
-            font-size: 2.5em;
-            color: #fff;
-            margin-top: 20px;
-            padding: 10px;
-            border: 2px dashed var(--glow-green);
-            display: none;
-            background: rgba(0, 50, 0, 0.5);
-        }
-
-        .footer {
-            margin-top: 30px;
-            font-size: 0.6em;
-            opacity: 0.5;
-        }
-    </style>
-</head>
-<body>
-
-<canvas id="matrix"></canvas>
-
 <div class="terminal-box" id="main-container">
     <h1>PODDA-MD</h1>
     <div class="subtitle">ENCRYPTED_SESSION_GENERATOR</div>
@@ -152,71 +6,55 @@
     
     <div id="btn-group">
         <button onclick="getPairCode()">GET_PAIR_CODE</button>
+        <button onclick="getQR()" style="background: #fff; color: #000;">GET_QR_SCAN</button>
+    </div>
+
+    <div id="qr-box" style="display:none; margin-top: 20px;">
+        <img id="qr-img" src="" style="border: 5px solid #fff; width: 200px;">
+        <p style="font-size: 0.7em;">SCAN THIS WITH WHATSAPP</p>
     </div>
 
     <div id="pair-code-display"></div>
     <div id="status-msg">SYSTEM_READY_...</div>
-
-    <div class="footer">STAY_SAFE_STAY_ANONYMOUS</div>
 </div>
 
 <script>
-    // Matrix Rain Effect
-    const canvas = document.getElementById('matrix');
-    const ctx = canvas.getContext('2d');
-    canvas.height = window.innerHeight;
-    canvas.width = window.innerWidth;
-    const characters = "01010101ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    const fontSize = 16;
-    const columns = canvas.width / fontSize;
-    const drops = Array(Math.floor(columns)).fill(1);
-
-    function drawMatrix() {
-        ctx.fillStyle = "rgba(0, 0, 0, 0.05)";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = "#0f0";
-        ctx.font = fontSize + "px monospace";
-        for (let i = 0; i < drops.length; i++) {
-            const text = characters.charAt(Math.floor(Math.random() * characters.length));
-            ctx.fillText(text, i * fontSize, drops[i] * fontSize);
-            if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) drops[i] = 0;
-            drops[i]++;
-        }
+    // QR එක ගන්න function එක
+    async function getQR() {
+        const qrBox = document.getElementById('qr-box');
+        const qrImg = document.getElementById('qr-img');
+        const statusMsg = document.getElementById('status-msg');
+        
+        statusMsg.innerText = "FETCHING_QR_CODE...";
+        
+        const interval = setInterval(async () => {
+            const res = await fetch('/qr');
+            const data = await res.json();
+            if (data.qr) {
+                qrImg.src = data.qr;
+                qrBox.style.display = 'block';
+                statusMsg.innerText = "QR_LOADED: SCAN NOW";
+                clearInterval(interval);
+            }
+        }, 3000);
     }
-    setInterval(drawMatrix, 50);
 
-    // Pairing Function
+    // Pairing function එක (කලින් එකමයි)
     async function getPairCode() {
         const num = document.getElementById('number').value;
         const statusMsg = document.getElementById('status-msg');
         const container = document.getElementById('main-container');
-        const pairDisplay = document.getElementById('pair-code-display');
-
-        // Reset
-        container.classList.remove('error-state');
-        statusMsg.style.color = "var(--glow-green)";
-        statusMsg.innerText = "BYPASSING_SECURITY...";
-        pairDisplay.style.display = 'none';
-
         try {
             const res = await fetch(`/pair?number=${num}`);
             const data = await res.json();
-
             if (res.ok && data.code) {
-                statusMsg.innerText = "ACCESS_GRANTED!";
-                pairDisplay.innerText = data.code;
-                pairDisplay.style.display = 'block';
-            } else {
-                throw new Error(data.error || "INVALID_REQUEST");
-            }
+                document.getElementById('pair-code-display').innerText = data.code;
+                document.getElementById('pair-code-display').style.display = 'block';
+                statusMsg.innerText = "CODE_GENERATED!";
+            } else { throw new Error(data.error); }
         } catch (e) {
-            // Error Styling
             container.classList.add('error-state');
-            statusMsg.style.color = "var(--error-red)";
-            statusMsg.innerText = "ACCESS_DENIED: " + e.message;
+            statusMsg.innerText = "DENIED: " + e.message;
         }
     }
 </script>
-
-</body>
-</html>
